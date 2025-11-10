@@ -1,25 +1,35 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { kv } from '@vercel/kv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Path to store API keys
+// Path to store API keys (local development only)
 const API_KEYS_FILE = path.join(__dirname, '../../data/api-keys.json');
+const KV_KEY = 'riverflow:api-keys';
+
+// Detect environment
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
 
 /**
  * API Key Model
- * Quản lý các API keys trong file JSON
+ * Quản lý các API keys với Vercel KV (production) hoặc file JSON (local)
  */
 class ApiKeyModel {
   constructor() {
-    this.ensureDataDirectory();
-    this.loadKeys();
+    this.keys = [];
+    this.isVercel = isVercel;
+    
+    if (!this.isVercel) {
+      this.ensureDataDirectory();
+      this.loadKeys();
+    }
   }
 
   /**
-   * Đảm bảo thư mục data tồn tại
+   * Đảm bảo thư mục data tồn tại (local only)
    */
   ensureDataDirectory() {
     const dataDir = path.dirname(API_KEYS_FILE);
@@ -29,17 +39,23 @@ class ApiKeyModel {
   }
 
   /**
-   * Load API keys từ file
+   * Load API keys từ storage
    */
-  loadKeys() {
+  async loadKeys() {
     try {
-      if (fs.existsSync(API_KEYS_FILE)) {
-        const data = fs.readFileSync(API_KEYS_FILE, 'utf8');
-        this.keys = JSON.parse(data);
+      if (this.isVercel) {
+        // Load from Vercel KV
+        const data = await kv.get(KV_KEY);
+        this.keys = data || [];
       } else {
-        // Initialize với master key từ env
-        this.keys = [];
-        this.saveKeys();
+        // Load from file (local development)
+        if (fs.existsSync(API_KEYS_FILE)) {
+          const data = fs.readFileSync(API_KEYS_FILE, 'utf8');
+          this.keys = JSON.parse(data);
+        } else {
+          this.keys = [];
+          this.saveKeys();
+        }
       }
     } catch (error) {
       console.error('Error loading API keys:', error);
@@ -48,11 +64,17 @@ class ApiKeyModel {
   }
 
   /**
-   * Lưu API keys vào file
+   * Lưu API keys vào storage
    */
-  saveKeys() {
+  async saveKeys() {
     try {
-      fs.writeFileSync(API_KEYS_FILE, JSON.stringify(this.keys, null, 2));
+      if (this.isVercel) {
+        // Save to Vercel KV
+        await kv.set(KV_KEY, this.keys);
+      } else {
+        // Save to file (local development)
+        fs.writeFileSync(API_KEYS_FILE, JSON.stringify(this.keys, null, 2));
+      }
     } catch (error) {
       console.error('Error saving API keys:', error);
       throw new Error('Failed to save API keys');
@@ -62,7 +84,10 @@ class ApiKeyModel {
   /**
    * Tạo API key mới
    */
-  createKey(name, description = '') {
+  async createKey(name, description = '') {
+    // Load latest keys first
+    await this.loadKeys();
+    
     const key = {
       id: Date.now().toString(),
       key: this.generateRandomKey(),
@@ -75,7 +100,7 @@ class ApiKeyModel {
     };
 
     this.keys.push(key);
-    this.saveKeys();
+    await this.saveKeys();
     
     return key;
   }
@@ -98,14 +123,15 @@ class ApiKeyModel {
   /**
    * Validate API key
    */
-  validateKey(apiKey) {
+  async validateKey(apiKey) {
+    await this.loadKeys();
     const key = this.keys.find(k => k.key === apiKey && k.active);
     
     if (key) {
       // Update usage stats
       key.lastUsedAt = new Date().toISOString();
       key.usageCount += 1;
-      this.saveKeys();
+      await this.saveKeys();
       return true;
     }
     
@@ -115,7 +141,8 @@ class ApiKeyModel {
   /**
    * Lấy tất cả API keys
    */
-  getAllKeys() {
+  async getAllKeys() {
+    await this.loadKeys();
     return this.keys.map(k => ({
       id: k.id,
       name: k.name,
@@ -131,19 +158,21 @@ class ApiKeyModel {
   /**
    * Lấy API key theo ID
    */
-  getKeyById(id) {
+  async getKeyById(id) {
+    await this.loadKeys();
     return this.keys.find(k => k.id === id);
   }
 
   /**
    * Revoke API key
    */
-  revokeKey(id) {
+  async revokeKey(id) {
+    await this.loadKeys();
     const key = this.keys.find(k => k.id === id);
     
     if (key) {
       key.active = false;
-      this.saveKeys();
+      await this.saveKeys();
       return true;
     }
     
@@ -153,12 +182,13 @@ class ApiKeyModel {
   /**
    * Delete API key
    */
-  deleteKey(id) {
+  async deleteKey(id) {
+    await this.loadKeys();
     const index = this.keys.findIndex(k => k.id === id);
     
     if (index !== -1) {
       this.keys.splice(index, 1);
-      this.saveKeys();
+      await this.saveKeys();
       return true;
     }
     
@@ -168,12 +198,13 @@ class ApiKeyModel {
   /**
    * Reactivate API key
    */
-  reactivateKey(id) {
+  async reactivateKey(id) {
+    await this.loadKeys();
     const key = this.keys.find(k => k.id === id);
     
     if (key) {
       key.active = true;
-      this.saveKeys();
+      await this.saveKeys();
       return true;
     }
     

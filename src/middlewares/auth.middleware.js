@@ -5,7 +5,7 @@ import apiKeyModel from '../models/apiKey.model.js';
  * Middleware để xác thực API key
  * Kiểm tra header X-API-Key với database hoặc default key
  */
-export const authenticateApiKey = (req, res, next) => {
+export const authenticateApiKey = async (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
 
   if (!apiKey) {
@@ -22,7 +22,8 @@ export const authenticateApiKey = (req, res, next) => {
   }
 
   // Kiểm tra với API keys trong database
-  if (apiKeyModel.validateKey(apiKey)) {
+  const isValid = await apiKeyModel.validateKey(apiKey);
+  if (isValid) {
     next();
     return;
   }
