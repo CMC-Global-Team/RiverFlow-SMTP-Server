@@ -9,6 +9,10 @@ pnpm-lock.yaml
 .env.local
 .env.production
 
+# Data (but keep api-keys.json structure)
+data/*.json
+!data/api-keys.json
+
 # Logs
 logs
 *.log

@@ -8,10 +8,17 @@ This server acts as an intermediary between the RiverFlow main server and Gmail 
 
 ## 🚀 Features
 
+### Email Services
 - ✅ Send general emails
 - ✅ Send email verification for new accounts
 - ✅ Send password reset emails
-- ✅ API key authentication
+- ✅ HTML email templates
+
+### Security & Management
+- ✅ API key authentication (multiple keys support)
+- ✅ **API Key Management** - Create, revoke, reactivate API keys
+- ✅ Master API key for admin operations
+- ✅ Usage tracking (last used, usage count)
 - ✅ Request validation
 - ✅ CORS support
 - ✅ Error handling
@@ -50,12 +57,17 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 SMTP_FROM=your-email@gmail.com
 
-# Security
+# Security - API Keys
 API_KEY=your-secure-api-key-here
+MASTER_API_KEY=your-master-api-key-here
 
 # CORS Origins (comma separated)
 CORS_ORIGINS=https://riverflow-server.onrender.com,http://localhost:8080
 ```
+
+**API Keys:**
+- `API_KEY`: Default API key for backward compatibility
+- `MASTER_API_KEY`: Admin key for managing generated API keys (create, revoke, delete)
 
 ## 🏃 Running
 
@@ -68,6 +80,12 @@ npm start
 ```
 
 ## 📡 API Endpoints
+
+### Root API Documentation
+```http
+GET /api
+```
+Returns list of all available endpoints
 
 ### Health Check
 ```http
@@ -119,6 +137,72 @@ Body:
   "frontendUrl": "https://river-flow-client.vercel.app"
 }
 ```
+
+---
+
+## 🔑 API Key Management
+
+### Create API Key
+```http
+POST /api/keys
+Headers:
+  X-Master-Key: your-master-key
+  Content-Type: application/json
+
+Body:
+{
+  "name": "Production Server",
+  "description": "Main backend server"
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "key": "rfsk_aBcDeFgHiJkLmNoPqRsTuVwXyZ...",
+    "name": "Production Server",
+    "id": "1699876543210",
+    "warning": "Save this key securely. You will not be able to see it again."
+  }
+}
+```
+
+### List All API Keys
+```http
+GET /api/keys
+Headers:
+  X-Master-Key: your-master-key
+```
+
+### Get API Key Details
+```http
+GET /api/keys/:id
+Headers:
+  X-Master-Key: your-master-key
+```
+
+### Revoke API Key
+```http
+PUT /api/keys/:id/revoke
+Headers:
+  X-Master-Key: your-master-key
+```
+
+### Reactivate API Key
+```http
+PUT /api/keys/:id/reactivate
+Headers:
+  X-Master-Key: your-master-key
+```
+
+### Delete API Key
+```http
+DELETE /api/keys/:id
+Headers:
+  X-Master-Key: your-master-key
+```
+
+**📖 See [API_KEY_MANAGEMENT.md](./API_KEY_MANAGEMENT.md) for detailed guide**
 
 ## 🔒 Security
 

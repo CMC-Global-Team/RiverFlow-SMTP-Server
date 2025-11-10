@@ -6,6 +6,7 @@ export const config = {
   port: process.env.PORT || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
   apiKey: process.env.API_KEY || 'default-api-key',
+  masterApiKey: process.env.MASTER_API_KEY || 'master-riverflow-smtp-key-2024',
   corsOrigins: process.env.CORS_ORIGINS 
     ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
     : ['http://localhost:8080', 'https://riverflow-server.onrender.com'],
