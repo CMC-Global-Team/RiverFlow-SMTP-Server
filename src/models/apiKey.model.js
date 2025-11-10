@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from 'redis';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,11 +12,47 @@ const KV_KEY = 'riverflow:api-keys';
 
 // Detect environment
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+const hasRedisUrl = !!process.env.REDIS_URL;
+const hasVercelKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+// Redis client (for external Redis like Redis Cloud)
+let redisClient = null;
 
 // Lazy import Vercel KV (only when needed)
 let kv = null;
+
+/**
+ * Get Redis client (external Redis like Redis Cloud)
+ */
+const getRedisClient = async () => {
+  if (!hasRedisUrl) return null;
+  
+  if (!redisClient) {
+    try {
+      redisClient = createClient({
+        url: process.env.REDIS_URL,
+      });
+      
+      redisClient.on('error', (err) => {
+        console.error('❌ Redis Client Error:', err);
+      });
+      
+      await redisClient.connect();
+      console.log('✅ Redis Cloud connected successfully');
+    } catch (error) {
+      console.error('❌ Failed to connect to Redis:', error);
+      throw new Error(`Redis connection failed: ${error.message}`);
+    }
+  }
+  
+  return redisClient;
+};
+
+/**
+ * Get Vercel KV client
+ */
 const getKV = async () => {
-  if (!isVercel) return null;
+  if (!hasVercelKV) return null;
   
   if (!kv) {
     try {
@@ -24,7 +61,6 @@ const getKV = async () => {
       console.log('✅ Vercel KV initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Vercel KV:', error);
-      console.error('Make sure KV is connected to your project and environment variables are set');
       throw new Error('Vercel KV initialization failed. Check KV connection and environment variables.');
     }
   }
@@ -62,7 +98,21 @@ class ApiKeyModel {
    */
   async loadKeys() {
     try {
-      if (this.isVercel) {
+      // Priority: External Redis > Vercel KV > File
+      if (hasRedisUrl) {
+        // Load from external Redis (Redis Cloud)
+        const client = await getRedisClient();
+        if (!client) {
+          console.warn('⚠️ Redis client is not available. Using empty keys array.');
+          this.keys = [];
+          return;
+        }
+        
+        console.log('Loading API keys from Redis Cloud...');
+        const data = await client.get(KV_KEY);
+        this.keys = data ? JSON.parse(data) : [];
+        console.log(`✅ Loaded ${this.keys.length} API keys from Redis Cloud`);
+      } else if (hasVercelKV) {
         // Load from Vercel KV
         const kvClient = await getKV();
         if (!kvClient) {
@@ -90,8 +140,9 @@ class ApiKeyModel {
       console.error('Error details:', {
         message: error.message,
         stack: error.stack,
+        hasRedisUrl,
+        hasVercelKV,
         isVercel: this.isVercel,
-        hasKVEnv: !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN),
       });
       this.keys = [];
     }
@@ -102,7 +153,20 @@ class ApiKeyModel {
    */
   async saveKeys() {
     try {
-      if (this.isVercel) {
+      // Priority: External Redis > Vercel KV > File
+      if (hasRedisUrl) {
+        // Save to external Redis (Redis Cloud)
+        const client = await getRedisClient();
+        if (!client) {
+          const errorMsg = 'Redis not configured. Please check REDIS_URL environment variable.';
+          console.error('❌', errorMsg);
+          throw new Error(errorMsg);
+        }
+        
+        console.log(`Saving ${this.keys.length} API keys to Redis Cloud...`);
+        await client.set(KV_KEY, JSON.stringify(this.keys));
+        console.log('✅ API keys saved to Redis Cloud successfully');
+      } else if (hasVercelKV) {
         // Save to Vercel KV
         const kvClient = await getKV();
         if (!kvClient) {
@@ -124,10 +188,12 @@ class ApiKeyModel {
       console.error('Error details:', {
         message: error.message,
         stack: error.stack,
+        hasRedisUrl,
+        hasVercelKV,
         isVercel: this.isVercel,
         keysCount: this.keys.length,
-        hasKVEnv: !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN),
-        kvEnvVars: {
+        envVars: {
+          REDIS_URL: process.env.REDIS_URL ? 'Set' : 'Missing',
           KV_REST_API_URL: process.env.KV_REST_API_URL ? 'Set' : 'Missing',
           KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN ? 'Set' : 'Missing',
         },
