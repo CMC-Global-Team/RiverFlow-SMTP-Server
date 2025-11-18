@@ -6,6 +6,7 @@ import {
   sendEmailValidation,
   sendVerificationEmailValidation,
   sendResetPasswordEmailValidation,
+  sendInvitationEmailValidation,
 } from '../validators/email.validator.js';
 
 const router = express.Router();
@@ -54,6 +55,19 @@ router.post(
   sendResetPasswordEmailValidation,
   validateRequest,
   emailController.sendResetPasswordEmail
+);
+
+/**
+ * @route   POST /api/email/invitation
+ * @desc    Gửi email mời cộng tác
+ * @access  Private (require API key)
+ */
+router.post(
+  '/invitation',
+  authenticateApiKey,
+  sendInvitationEmailValidation,
+  validateRequest,
+  emailController.sendInvitationEmail
 );
 
 export default router;
