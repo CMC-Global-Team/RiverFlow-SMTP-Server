@@ -85,6 +85,37 @@ class EmailController {
   }
 
   /**
+   * Gửi email mời cộng tác
+   * POST /api/email/invitation
+   */
+  async sendInvitationEmail(req, res, next) {
+    try {
+      const { to, token, inviterName, mindmapTitle, frontendUrl } = req.body;
+      
+      // Log for debugging
+      console.log('Invitation email request:', {
+        to,
+        token: token ? `${token.substring(0, 10)}...` : 'missing',
+        inviterName,
+        mindmapTitle,
+        frontendUrl,
+      });
+      
+      const result = await emailService.sendInvitationEmail({
+        to,
+        token,
+        inviterName,
+        mindmapTitle,
+        frontendUrl,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Health check
    * GET /api/email/health
    */
