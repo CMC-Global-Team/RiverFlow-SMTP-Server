@@ -10,7 +10,7 @@ function getBackendConfig() {
 export function initRealtimeServer(httpServer, corsOrigins) {
   const io = new Server(httpServer, {
     cors: { origin: corsOrigins, credentials: true },
-    path: '/socket.io'
+    path: '/socket.io/'
   })
 
   const { backendUrl, jwtSecret } = getBackendConfig()

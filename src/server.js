@@ -13,8 +13,8 @@ const startServer = async () => {
     const smtpReady = await verifyConnection();
     
     if (!smtpReady) {
-      console.warn('⚠️  Warning: SMTP connection could not be verified');
-      console.warn('⚠️  Server will start but email sending may fail');
+      console.warn('Warning: SMTP connection could not be verified');
+      console.warn('Server will start but email sending may fail');
     }
 
     // Start listening
@@ -36,7 +36,7 @@ const startServer = async () => {
       console.log('==================================================');
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 };
