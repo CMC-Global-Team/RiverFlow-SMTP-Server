@@ -34,13 +34,13 @@ const getRedisClient = async () => {
       });
       
       redisClient.on('error', (err) => {
-        console.error('❌ Redis Client Error:', err);
+        console.error('Redis Client Error:', err);
       });
       
       await redisClient.connect();
-      console.log('✅ Redis Cloud connected successfully');
+      console.log('Redis Cloud connected successfully');
     } catch (error) {
-      console.error('❌ Failed to connect to Redis:', error);
+      console.error('Failed to connect to Redis:', error);
       throw new Error(`Redis connection failed: ${error.message}`);
     }
   }
@@ -103,7 +103,7 @@ class ApiKeyModel {
         // Load from external Redis (Redis Cloud)
         const client = await getRedisClient();
         if (!client) {
-          console.warn('⚠️ Redis client is not available. Using empty keys array.');
+          console.warn('Redis client is not available. Using empty keys array.');
           this.keys = [];
           return;
         }
@@ -111,12 +111,12 @@ class ApiKeyModel {
         console.log('Loading API keys from Redis Cloud...');
         const data = await client.get(KV_KEY);
         this.keys = data ? JSON.parse(data) : [];
-        console.log(`✅ Loaded ${this.keys.length} API keys from Redis Cloud`);
+        console.log(`Loaded ${this.keys.length} API keys from Redis Cloud`);
       } else if (hasVercelKV) {
         // Load from Vercel KV
         const kvClient = await getKV();
         if (!kvClient) {
-          console.warn('⚠️ Vercel KV is not available. Using empty keys array.');
+          console.warn('Vercel KV is not available. Using empty keys array.');
           this.keys = [];
           return;
         }
@@ -124,7 +124,7 @@ class ApiKeyModel {
         console.log('Loading API keys from Vercel KV...');
         const data = await kvClient.get(KV_KEY);
         this.keys = data || [];
-        console.log(`✅ Loaded ${this.keys.length} API keys from Vercel KV`);
+        console.log(`Loaded ${this.keys.length} API keys from Vercel KV`);
       } else {
         // Load from file (local development)
         if (fs.existsSync(API_KEYS_FILE)) {
@@ -136,7 +136,7 @@ class ApiKeyModel {
         }
       }
     } catch (error) {
-      console.error('❌ Error loading API keys:', error);
+      console.error('Error loading API keys:', error);
       console.error('Error details:', {
         message: error.message,
         stack: error.stack,
@@ -159,32 +159,32 @@ class ApiKeyModel {
         const client = await getRedisClient();
         if (!client) {
           const errorMsg = 'Redis not configured. Please check REDIS_URL environment variable.';
-          console.error('❌', errorMsg);
+          console.error(errorMsg);
           throw new Error(errorMsg);
         }
         
         console.log(`Saving ${this.keys.length} API keys to Redis Cloud...`);
         await client.set(KV_KEY, JSON.stringify(this.keys));
-        console.log('✅ API keys saved to Redis Cloud successfully');
+        console.log('API keys saved to Redis Cloud successfully');
       } else if (hasVercelKV) {
         // Save to Vercel KV
         const kvClient = await getKV();
         if (!kvClient) {
           const errorMsg = 'Vercel KV not configured. Please check KV_REST_API_URL and KV_REST_API_TOKEN environment variables.';
-          console.error('❌', errorMsg);
+          console.error(errorMsg);
           throw new Error(errorMsg);
         }
         
         console.log(`Saving ${this.keys.length} API keys to Vercel KV...`);
         await kvClient.set(KV_KEY, this.keys);
-        console.log('✅ API keys saved to Vercel KV successfully');
+        console.log('API keys saved to Vercel KV successfully');
       } else {
         // Save to file (local development)
         fs.writeFileSync(API_KEYS_FILE, JSON.stringify(this.keys, null, 2));
-        console.log('✅ API keys saved to file successfully');
+        console.log('API keys saved to file successfully');
       }
     } catch (error) {
-      console.error('❌ Error saving API keys:', error);
+      console.error('Error saving API keys:', error);
       console.error('Error details:', {
         message: error.message,
         stack: error.stack,

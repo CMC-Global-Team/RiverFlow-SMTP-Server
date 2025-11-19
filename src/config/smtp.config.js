@@ -46,10 +46,10 @@ export const verifyConnection = async () => {
   try {
     const transporter = createTransporter();
     await transporter.verify();
-    console.log('✅ SMTP Server is ready to send emails');
+    console.log('SMTP Server is ready to send emails');
     return true;
   } catch (error) {
-    console.error('❌ SMTP Server connection failed:', error.message);
+    console.error('SMTP Server connection failed:', error.message);
     return false;
   }
 };
