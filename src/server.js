@@ -1,6 +1,8 @@
 import app from './app.js';
 import { config } from './config/app.config.js';
 import { verifyConnection } from './config/smtp.config.js';
+import http from 'http';
+import { initRealtimeServer } from './realtime/socket.js';
 
 /**
  * Start server
@@ -17,19 +19,21 @@ const startServer = async () => {
 
     // Start listening
     const PORT = config.port;
-    app.listen(PORT, () => {
-      console.log('='.repeat(50));
-      console.log('🚀 RiverFlow SMTP Server');
-      console.log('='.repeat(50));
-      console.log(`📧 Server running on port ${PORT}`);
-      console.log(`🌍 Environment: ${config.nodeEnv}`);
-      console.log(`📬 SMTP Host: ${config.smtp.host}:${config.smtp.port}`);
-      console.log(`📨 From Email: ${config.smtp.from}`);
-      console.log(`🔐 CORS Origins: ${config.corsOrigins.join(', ')}`);
-      console.log('='.repeat(50));
-      console.log(`📍 API Documentation: http://localhost:${PORT}/api`);
-      console.log(`💚 Health Check: http://localhost:${PORT}/api/email/health`);
-      console.log('='.repeat(50));
+    const server = http.createServer(app);
+    initRealtimeServer(server, config.corsOrigins);
+    server.listen(PORT, () => {
+      console.log('==================================================');
+      console.log('RiverFlow SMTP Server');
+      console.log('==================================================');
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${config.nodeEnv}`);
+      console.log(`SMTP Host: ${config.smtp.host}:${config.smtp.port}`);
+      console.log(`From Email: ${config.smtp.from}`);
+      console.log(`CORS Origins: ${config.corsOrigins.join(', ')}`);
+      console.log('==================================================');
+      console.log(`API Documentation: http://localhost:${PORT}/api`);
+      console.log(`Health Check: http://localhost:${PORT}/api/email/health`);
+      console.log('==================================================');
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
