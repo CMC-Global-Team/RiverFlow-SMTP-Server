@@ -2,7 +2,6 @@ import app from './app.js';
 import { config } from './config/app.config.js';
 import { verifyConnection } from './config/smtp.config.js';
 import http from 'http';
-import { initRealtimeServer } from './realtime/socket.js';
 
 /**
  * Start server
@@ -20,7 +19,6 @@ const startServer = async () => {
     // Start listening
     const PORT = config.port;
     const server = http.createServer(app);
-    initRealtimeServer(server, config.corsOrigins);
     server.listen(PORT, () => {
       console.log('==================================================');
       console.log('RiverFlow SMTP Server');
