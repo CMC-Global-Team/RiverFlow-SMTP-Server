@@ -14,6 +14,7 @@ export function initRealtimeServer(httpServer, corsOrigins) {
   })
 
   const { backendUrl, jwtSecret } = getBackendConfig()
+  const roomParticipants = new Map()
 
   io.of('/realtime').use((socket, next) => {
     try {
@@ -62,7 +63,19 @@ export function initRealtimeServer(httpServer, corsOrigins) {
         }
         if (!room) return
         await socket.join(room)
+        socket.data.room = room
         socket.emit('mindmap:joined', { room, canEdit })
+        const participants = roomParticipants.get(room) || new Map()
+        roomParticipants.set(room, participants)
+        const state = Array.from(participants.values()).map((p) => ({
+          clientId: p.clientId,
+          userId: p.userId,
+          name: p.name,
+          color: p.color,
+          cursor: p.cursor || null,
+          active: p.active || null,
+        }))
+        socket.emit('presence:state', state)
       } catch {}
     })
 
@@ -83,7 +96,66 @@ export function initRealtimeServer(httpServer, corsOrigins) {
     })
 
     socket.on('cursor:move', (room, data) => {
+      const participants = roomParticipants.get(room)
+      if (participants) {
+        const p = participants.get(socket.id)
+        if (p) {
+          p.cursor = data?.cursor || null
+        }
+      }
       socket.broadcast.to(room).emit('cursor:move', data)
+    })
+
+    socket.on('presence:announce', (room, info) => {
+      const participants = roomParticipants.get(room) || new Map()
+      roomParticipants.set(room, participants)
+      const clientId = socket.id
+      const userId = socket.data.user?.id || info?.userId || null
+      const name = info?.name || ''
+      const color = info?.color || '#3b82f6'
+      const existing = participants.get(clientId) || {}
+      participants.set(clientId, {
+        clientId,
+        userId,
+        name,
+        color,
+        cursor: existing.cursor || null,
+        active: existing.active || null,
+      })
+      socket.broadcast.to(room).emit('presence:announce', { clientId, userId, name, color })
+    })
+
+    socket.on('presence:active', (room, data) => {
+      const participants = roomParticipants.get(room)
+      if (participants) {
+        const p = participants.get(socket.id)
+        if (p) {
+          p.active = data || null
+        }
+      }
+      socket.broadcast.to(room).emit('presence:active', { clientId: socket.id, active: data || null })
+    })
+
+    socket.on('presence:clear', (room) => {
+      const participants = roomParticipants.get(room)
+      if (participants) {
+        const p = participants.get(socket.id)
+        if (p) {
+          p.active = null
+        }
+      }
+      socket.broadcast.to(room).emit('presence:clear', { clientId: socket.id })
+    })
+
+    socket.on('disconnect', () => {
+      const room = socket.data.room
+      if (!room) return
+      const participants = roomParticipants.get(room)
+      if (!participants) return
+      if (participants.has(socket.id)) {
+        participants.delete(socket.id)
+        socket.broadcast.to(room).emit('presence:left', { clientId: socket.id })
+      }
     })
   })
 }
