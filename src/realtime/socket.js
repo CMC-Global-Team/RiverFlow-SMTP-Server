@@ -96,6 +96,13 @@ export function initRealtimeServer(httpServer, corsOrigins) {
     })
 
     socket.on('cursor:move', (room, data) => {
+      const participants = roomParticipants.get(room)
+      if (participants) {
+        const p = participants.get(socket.id)
+        if (p) {
+          p.cursor = data?.cursor || null
+        }
+      }
       socket.broadcast.to(room).emit('cursor:move', data)
     })
 
