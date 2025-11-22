@@ -9,7 +9,7 @@ export const config = {
   masterApiKey: process.env.MASTER_API_KEY || 'master-riverflow-smtp-key-2024',
   corsOrigins: process.env.CORS_ORIGINS 
     ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-    : ['http://localhost:8080', 'https://riverflow-server.onrender.com', 'https://river-flow-client.vercel.app'],
+    : ['http://localhost:8080', 'https://river-flow.id.vn', 'https://river-flow-client.vercel.app'],
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT) || 587,
